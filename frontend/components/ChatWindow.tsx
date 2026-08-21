@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { sendChatMessage } from "@/lib/api";
+import { streamChatMessage } from "@/lib/api";
 import type { ChatMessage } from "@/types/chat";
 import ChatInput from "./ChatInput";
 import MessageBubble from "./MessageBubble";
@@ -20,6 +20,11 @@ export default function ChatWindow() {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // One conversation thread per browser tab: every message in this session
+  // shares the same thread_id so the backend persists them as one chat.
+  const [threadId] = useState(() => crypto.randomUUID());
+
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,12 +33,32 @@ export default function ChatWindow() {
 
   async function handleSend(text: string) {
     setMessages((prev) => [...prev, createMessage("user", text)]);
-    setIsLoading(true);
+    setIsLoading(true); // shows the "Thinking..." bubble until the first token
     setError(null);
 
+    // The assistant bubble is created empty and filled in live as tokens stream.
+    const assistantId = crypto.randomUUID();
+    let firstToken = true;
+
     try {
-      const reply = await sendChatMessage(text);
-      setMessages((prev) => [...prev, createMessage("assistant", reply)]);
+      await streamChatMessage(text, threadId, (token) => {
+        if (firstToken) {
+          // First token arrived: swap the loading indicator for a real bubble.
+          firstToken = false;
+          setIsLoading(false);
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: "assistant", content: token },
+          ]);
+        } else {
+          // Append this token to the growing assistant bubble.
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: m.content + token } : m
+            )
+          );
+        }
+      });
     } catch {
       setError("Failed to get a response. Is the backend running?");
     } finally {
@@ -55,6 +80,7 @@ export default function ChatWindow() {
           <MessageBubble key={message.id} message={message} />
         ))}
 
+        {/* Shown only until the first streamed token replaces it. */}
         {isLoading && (
           <div className="flex justify-start">
             <div className="rounded-2xl rounded-bl-sm bg-zinc-100 px-4 py-2.5 text-sm text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
