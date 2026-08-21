@@ -1,0 +1,16 @@
+# Docker Compose placeholder.
+# Containerized deployment (backend image, frontend service) will be
+# configured in a later step of the project.
+
+services:
+  # backend:
+  #   build: ./backend
+  #   ports:
+  #     - "8000:8000"
+  #   env_file:
+  #     - ./backend/.env
+
+  # frontend:
+  #   build: ./frontend
+  #   ports:
+  #     - "3000:3000"
