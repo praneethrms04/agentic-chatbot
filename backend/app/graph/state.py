@@ -1,6 +1,7 @@
 """LangGraph state definition for the chat workflow."""
 
-from typing import TypedDict
+import operator
+from typing import Annotated, TypedDict
 
 
 class ChatState(TypedDict):
@@ -8,3 +9,5 @@ class ChatState(TypedDict):
 
     message: str
     response: str
+    # Accumulated conversation turns; the checkpointer persists this per thread.
+    history: Annotated[list[dict], operator.add]

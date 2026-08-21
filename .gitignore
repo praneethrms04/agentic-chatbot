@@ -20,6 +20,9 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
+# langgraph checkpoint database
+backend/data/
+
 # testing
 coverage/
 .coverage
